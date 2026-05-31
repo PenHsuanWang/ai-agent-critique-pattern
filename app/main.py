@@ -95,7 +95,7 @@ def create_app() -> FastAPI:
             "that antagonistically refine outputs through structured feedback cycles. "
             "Supports PostgreSQL checkpointing, HITL pause/resume, and vector episodic memory."
         ),
-        version="0.2.0",
+        version="0.6.0",
         lifespan=lifespan,
         docs_url="/docs",
         redoc_url="/redoc",

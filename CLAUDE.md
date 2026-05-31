@@ -20,8 +20,13 @@ uv run uvicorn app.main:app --reload --port 8001
   **structured CritiqueResult** (Critique→Orchestrator).
 
 ### State Filter
-`OrchestratorService._build_generator_input()` and `._build_critique_input()` are the
-sole entry points for constructing agent inputs. All data passes through these filters.
+The state-filtered input boundary is implemented by:
+- `OrchestratorService._build_revision_context()`
+- `GeneratorAgentService._build_initial_message()`
+- `CritiqueAgentService._build_evaluation_request()`
+
+These are the places where cross-boundary data is explicitly constructed and
+sanitised before entering a fresh agent session.
 
 ### Critique Output Contract
 The Critique agent MUST call the `submit_critique` tool to signal completion.
@@ -43,15 +48,16 @@ Protocols. Use these types in `OrchestratorService` — never `Any` or concrete 
 
 ## Adding New Generator Tools
 1. Add implementation function in `app/services/tools/common_tools.py`
-2. Add JSON schema entry to `GENERATOR_TOOL_DEFINITIONS`
-3. Register in `GENERATOR_TOOL_REGISTRY`
+2. Add JSON schema entry to `COMMON_TOOL_DEFINITIONS`
+3. Register in `COMMON_TOOL_REGISTRY`
 
 ## Adding New Critique Tools
 1. Add implementation function in `app/services/tools/common_tools.py` (if shared)
    or `app/services/tools/critique_tools.py` (if critique-specific)
-2. Add schema entry to `CRITIQUE_BASE_TOOL_DEFINITIONS`
-3. Register in `CRITIQUE_BASE_TOOL_REGISTRY`
-   Note: `submit_critique` is always injected dynamically per-run; do NOT add it to the base registry.
+2. Register shared tools in `COMMON_TOOL_DEFINITIONS` / `COMMON_TOOL_REGISTRY`
+3. For per-run critique tools, follow the `build_tool_pair()` pattern in
+   `episodic_memory_tools.py`
+   Note: `submit_critique` is always injected dynamically per-run; do NOT add a global singleton handler.
 
 ## Adding New Per-Run Stateful Critique Tools (like `retrieve_similar_critiques`)
 1. Create a `make_<tool>_handler(dependency)` factory in a new file under `app/services/tools/`.

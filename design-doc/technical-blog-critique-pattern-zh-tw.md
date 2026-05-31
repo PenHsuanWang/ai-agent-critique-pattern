@@ -1,6 +1,8 @@
 # 超越單一代理人的侷限：深入解析 Generator–Critique 拮抗迴圈設計模式
 
 > **作者按**：本文以實際開源專案 `ai-agent-critique-pattern`（FastAPI + Anthropic Claude SDK，v0.4.0）為基礎，系統性地解析「生成者—批評者」（Generator–Critique）多代理人架構的設計哲學、核心挑戰與結構性解法。文章對象為具備 Python 基礎、對 LLM 應用開發有一定認識的軟體工程師與 AI 系統架構師。
+>
+> **歷史版本註記（請先閱讀）**：本文保留的是 **v0.4.0 時期** 的設計解說，部分欄位名稱與基礎設施已落後於目前原始碼。當前實作以 `HANDBOOK.md` 與 `app/` 原始碼為準；例如目前的 `CritiqueResult` 結構為 `passed / issues / revision_notes / confidence_score`，向量情節記憶也已是 **PostgreSQL + pgvector**，而非文中多處提到的舊版 ChromaDB 流程。
 
 ---
 

@@ -210,13 +210,15 @@ ai-agent-critique-pattern/
 │       ├── critique.py                  # POST /api/v1/critique
 │       ├── hitl.py                      # GET/POST /api/v1/sessions/{id}/state|resume
 │       └── documents.py                 # GET/POST/DELETE /api/v1/documents
-├── local_data/                          # Document knowledge base (put .txt files here)
+├── local_data/                          # Document knowledge base (put .txt/.md/.csv files here)
 ├── design-doc/
 │   ├── 多代理人迴圈代理架構設計.md         # Original Chinese architectural spec
-│   ├── architecture_diagram.html        # Visual architecture diagram
-│   ├── agent-react-loop-deep-dive.jpg   # Original hand-drawn memory-isolation diagram
-│   ├── agent-react-loop-deep-dive-v2.svg  # Implementation-accurate hand-drawn style diagram (editable)
-│   ├── agent-react-loop-deep-dive-v2.png  # Implementation-accurate hand-drawn style diagram (image export)
+│   ├── architecture.png                 # Original MVP architecture diagram
+│   ├── architecture-diagram.jpg         # Generator–Critique architecture diagram (conceptual)
+│   ├── cretique-agent-loop-deep-dive.jpg # Critique loop / memory isolation diagram (conceptual)
+│   ├── system-sequential-flow.png       # Legacy single-agent sequence diagram
+│   ├── technical-blog-critique-pattern-zh-tw.md
+│   ├── vector_memory_pgvector_sdd.md
 │   └── diagram_creation_guide.md
 ├── .env.example                         # Configuration template
 ├── pyproject.toml                       # Dependencies + tool config
@@ -471,11 +473,11 @@ When unset (development mode):
 
 ### GET `/api/v1/documents`
 
-List all `.txt` files in the `local_data/` directory.
+List all supported documents in the `local_data/` directory.
 
 ### POST `/api/v1/documents`
 
-Upload a new `.txt` document to the knowledge base.
+Upload a new `.txt`, `.md`, or `.csv` document to the knowledge base.
 
 ### DELETE `/api/v1/documents/{filename}`
 
@@ -812,8 +814,13 @@ Failed episodes encode what *went wrong* — recurring failure patterns are the 
 
 ## 9. Agent System Deep Dive
 
-**Implementation-accurate visual reference:**  
-`design-doc/agent-react-loop-deep-dive-v2.svg` is the editable hand-drawn style source, and `design-doc/agent-react-loop-deep-dive-v2.png` is the exported image version. These assets reflect the current implementation, including `previous_draft`, `previous_critique.issues`, the current `CritiqueResult` schema, Critique's default tool-call cap of 10, and PostgreSQL + pgvector episodic memory.
+**Diagram status:**  
+The image files in `design-doc/` are useful for explaining the design intent, but they are **not all implementation-accurate**. In particular, `design-doc/cretique-agent-loop-deep-dive.jpg` and `design-doc/architecture-diagram.jpg` omit the current `previous_draft` / `previous_critique` continuity paths and show older tool/storage examples that are not present in the codebase. For source-of-truth behaviour, use:
+
+- `app/services/orchestrator.py`
+- `app/services/generator_agent.py`
+- `app/services/critique_agent.py`
+- `app/services/tools/*.py`
 
 ### 9.1 Generator Agent
 
