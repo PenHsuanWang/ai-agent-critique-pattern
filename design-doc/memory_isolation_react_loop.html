@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Isolation & ReAct Loop Interaction</title>
+    <style>
+        body { 
+            background-color: #f6f8fa; 
+            padding: 40px; 
+            display: flex; 
+            justify-content: center; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+        .diagram-container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+            padding: 30px;
+            overflow-x: auto;
+        }
+        svg { 
+            display: block; 
+        }
+        .title { font-size: 28px; font-weight: bold; fill: #24292f; }
+        .subtitle { font-size: 16px; font-weight: normal; fill: #57606a; }
+        .box-title { font-size: 16px; font-weight: bold; fill: #24292f; }
+        .box-text { font-size: 13px; fill: #57606a; }
+        .box-text-bold { font-size: 13px; font-weight: bold; fill: #24292f; }
+        .arrow-text { font-size: 13px; font-weight: bold; fill: #0969da; }
+        .arrow-text-alt { font-size: 13px; font-weight: bold; fill: #cf222e; }
+        .sub-box-title { font-size: 14px; font-weight: bold; fill: #24292f; text-anchor: middle; }
+    </style>
+</head>
+<body>
+    <div class="diagram-container">
+        <svg width="1600" height="1200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <!-- Arrow Markers -->
+                <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#0969da"/>
+                </marker>
+                <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#cf222e"/>
+                </marker>
+                <marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#57606a"/>
+                </marker>
+                <marker id="arrow-cyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#00b4d8"/>
+                </marker>
+                <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#9673a6"/>
+                </marker>
+
+                <!-- Gradients -->
+                <linearGradient id="gradOrange" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#ffe6cc"/><stop offset="100%" stop-color="#ffcc99"/>
+                </linearGradient>
+                <linearGradient id="gradYellow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#fff2cc"/><stop offset="100%" stop-color="#ffe699"/>
+                </linearGradient>
+                <linearGradient id="gradBlue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#dae8fc"/><stop offset="100%" stop-color="#c4d6f0"/>
+                </linearGradient>
+                <linearGradient id="gradPurple" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#e1d5e7"/><stop offset="100%" stop-color="#d4c1eb"/>
+                </linearGradient>
+                <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#d5e8d4"/><stop offset="100%" stop-color="#97d077"/>
+                </linearGradient>
+                <linearGradient id="gradCyan" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#e0f7fa"/><stop offset="100%" stop-color="#b2ebf2"/>
+                </linearGradient>
+                <linearGradient id="gradWhite" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#f3f4f6"/>
+                </linearGradient>
+                
+                <!-- Drop Shadow -->
+                <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+                    <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.1" />
+                </filter>
+            </defs>
+
+            <!-- Title -->
+            <text x="50" y="50" class="title">Memory Control &amp; ReAct Loop Isolation Interaction</text>
+            <text x="50" y="80" class="subtitle">An architectural deep dive into the physical separation of state, filtering barriers, and stateless ReAct loops.</text>
+
+            <!-- Background Workspace Boundaries -->
+            <rect x="150" y="380" width="600" height="650" fill="rgba(218, 232, 252, 0.2)" stroke="#a1c4fd" stroke-width="2" stroke-dasharray="8 4" rx="10" />
+            <text x="450" y="1010" font-size="16" font-weight="bold" fill="#6ba5f2" text-anchor="middle">Generator Workspace (Isolated Python Scope)</text>
+
+            <rect x="850" y="380" width="600" height="650" fill="rgba(225, 213, 231, 0.2)" stroke="#cbb2df" stroke-width="2" stroke-dasharray="8 4" rx="10" />
+            <text x="1150" y="1010" font-size="16" font-weight="bold" fill="#b18cd4" text-anchor="middle">Critique Workspace (Isolated Python Scope)</text>
+
+            <!-- Orchestrator Box (Top Center) -->
+            <rect x="400" y="120" width="800" height="140" rx="8" fill="url(#gradOrange)" stroke="#d79b00" stroke-width="2" filter="url(#shadow)" />
+            <text x="800" y="150" class="box-title" text-anchor="middle">OrchestratorService (State Coordinator)</text>
+            <text x="800" y="175" class="box-text" text-anchor="middle">The ONLY component that holds the global Parent State (OrchestratorState).</text>
+            <text x="800" y="195" class="box-text" text-anchor="middle">Maintains the Iteration Counter and the Conditional Routing logic.</text>
+            <text x="800" y="215" class="box-text-bold" text-anchor="middle">Variables: task, current_draft, critique_result, iteration_count</text>
+            <text x="800" y="240" class="box-text" text-anchor="middle" fill="#cf222e">Never holds any AgentSession (ReAct messages array) directly.</text>
+
+            <!-- State Filters (Barriers) -->
+            <rect x="350" y="310" width="200" height="60" rx="6" fill="url(#gradYellow)" stroke="#d6b656" stroke-width="2" filter="url(#shadow)" />
+            <text x="450" y="335" class="box-title" text-anchor="middle">State Filter</text>
+            <text x="450" y="355" class="box-text" text-anchor="middle">Deep Copy &amp; Extract</text>
+
+            <rect x="1050" y="310" width="200" height="60" rx="6" fill="url(#gradYellow)" stroke="#d6b656" stroke-width="2" filter="url(#shadow)" />
+            <text x="1150" y="335" class="box-title" text-anchor="middle">State Filter</text>
+            <text x="1150" y="355" class="box-text" text-anchor="middle">Deep Copy &amp; Extract</text>
+
+            <!-- Generator Internal Components -->
+            <!-- Short Term Memory -->
+            <rect x="300" y="420" width="300" height="80" rx="8" fill="url(#gradWhite)" stroke="#a1c4fd" stroke-width="2" filter="url(#shadow)" />
+            <text x="450" y="445" class="box-title" text-anchor="middle">AgentSession (Working Memory)</text>
+            <text x="450" y="465" class="box-text" text-anchor="middle">Newly instantiated for every iteration.</text>
+            <text x="450" y="485" class="box-text" text-anchor="middle">Holds ONLY Generator's LLM context.</text>
+
+            <!-- Generator ReAct Loop -->
+            <rect x="230" y="580" width="160" height="60" rx="6" fill="#ffffff" stroke="#0969da" stroke-width="2" />
+            <text x="310" y="605" class="sub-box-title">Thought (Reasoning)</text>
+            <text x="310" y="625" class="box-text" text-anchor="middle">Plan draft structure</text>
+
+            <rect x="510" y="580" width="160" height="60" rx="6" fill="#ffffff" stroke="#0969da" stroke-width="2" />
+            <text x="590" y="605" class="sub-box-title">Action (Tool Call)</text>
+            <text x="590" y="625" class="box-text" text-anchor="middle">read_local_document()</text>
+
+            <rect x="510" y="720" width="160" height="60" rx="6" fill="#ffffff" stroke="#0969da" stroke-width="2" />
+            <text x="590" y="745" class="sub-box-title">Observation</text>
+            <text x="590" y="765" class="box-text" text-anchor="middle">Document content</text>
+
+            <rect x="230" y="720" width="160" height="60" rx="6" fill="#ffffff" stroke="#0969da" stroke-width="2" />
+            <text x="310" y="745" class="sub-box-title">Update Context</text>
+            <text x="310" y="765" class="box-text" text-anchor="middle">Append to AgentSession</text>
+
+            <text x="450" y="685" class="box-title" fill="#57606a" text-anchor="middle">ReAct Loop</text>
+            <text x="450" y="705" class="box-text" fill="#57606a" text-anchor="middle">(Max 15 iterations)</text>
+
+            <!-- Output: Clean Draft -->
+            <rect x="300" y="860" width="300" height="60" rx="8" fill="url(#gradGreen)" stroke="#82b366" stroke-width="2" filter="url(#shadow)" />
+            <text x="450" y="885" class="box-title" text-anchor="middle">Output: Final Draft</text>
+            <text x="450" y="905" class="box-text" text-anchor="middle">Clean text block. NO reasoning traces.</text>
+
+
+            <!-- Critique Internal Components -->
+            <!-- Short Term Memory -->
+            <rect x="1000" y="420" width="300" height="80" rx="8" fill="url(#gradWhite)" stroke="#cbb2df" stroke-width="2" filter="url(#shadow)" />
+            <text x="1150" y="445" class="box-title" text-anchor="middle">AgentSession (Working Memory)</text>
+            <text x="1150" y="465" class="box-text" text-anchor="middle">Newly instantiated for every iteration.</text>
+            <text x="1150" y="485" class="box-text" text-anchor="middle">Isolated from Generator's context.</text>
+
+            <!-- Critique ReAct Loop -->
+            <rect x="930" y="580" width="160" height="60" rx="6" fill="#ffffff" stroke="#9673a6" stroke-width="2" />
+            <text x="1010" y="605" class="sub-box-title">Thought (Evaluation)</text>
+            <text x="1010" y="625" class="box-text" text-anchor="middle">Check rubric &amp; task</text>
+
+            <rect x="1210" y="580" width="160" height="60" rx="6" fill="#ffffff" stroke="#9673a6" stroke-width="2" />
+            <text x="1290" y="605" class="sub-box-title">Action (Tool Call)</text>
+            <text x="1290" y="625" class="box-text" text-anchor="middle">Retrieve Vector Memory</text>
+
+            <rect x="1210" y="720" width="160" height="60" rx="6" fill="#ffffff" stroke="#9673a6" stroke-width="2" />
+            <text x="1290" y="745" class="sub-box-title">Observation</text>
+            <text x="1290" y="765" class="box-text" text-anchor="middle">Past errors / Context</text>
+
+            <rect x="930" y="720" width="160" height="60" rx="6" fill="#ffffff" stroke="#9673a6" stroke-width="2" />
+            <text x="1010" y="745" class="sub-box-title">Update Context</text>
+            <text x="1010" y="765" class="box-text" text-anchor="middle">Append to AgentSession</text>
+
+            <text x="1150" y="685" class="box-title" fill="#57606a" text-anchor="middle">ReAct Loop</text>
+            <text x="1150" y="705" class="box-text" fill="#57606a" text-anchor="middle">(Mandatory Exit Tool)</text>
+
+            <!-- Output: CritiqueResult -->
+            <rect x="1000" y="860" width="300" height="60" rx="8" fill="url(#gradCyan)" stroke="#00b4d8" stroke-width="2" filter="url(#shadow)" />
+            <text x="1150" y="885" class="box-title" text-anchor="middle">Output: CritiqueResult (JSON)</text>
+            <text x="1150" y="905" class="box-text" text-anchor="middle">{passed: bool, issues: [...], notes: ...}</text>
+
+            <!-- Vector Database -->
+            <rect x="1050" y="1070" width="200" height="80" rx="8" fill="url(#gradPurple)" stroke="#9673a6" stroke-width="2" filter="url(#shadow)" />
+            <text x="1150" y="1095" class="box-title" text-anchor="middle">Vector DB (pgvector)</text>
+            <text x="1150" y="1115" class="box-text" text-anchor="middle">Long-Term Episodic</text>
+            <text x="1150" y="1135" class="box-text" text-anchor="middle">Memory Store</text>
+
+            <!-- ── ROUTING LINES ── -->
+            
+            <!-- 1. Orchestrator -> Gen Filter -->
+            <path d="M 450 260 L 450 310" fill="none" stroke="#cf222e" stroke-width="3" stroke-dasharray="6 4" marker-end="url(#arrow-red)" />
+            <text x="460" y="285" class="arrow-text-alt">(5) Loop: Inject Task &amp; Revision Notes</text>
+
+            <!-- 2. Gen Filter -> AgentSession -->
+            <path d="M 450 370 L 450 420" fill="none" stroke="#cf222e" stroke-width="3" marker-end="url(#arrow-red)" />
+            <text x="460" y="400" class="arrow-text-alt">Isolated Payload (No Critic Traces)</text>
+
+            <!-- Gen AgentSession -> Loop -->
+            <path d="M 450 500 L 450 540 L 310 540 L 310 580" fill="none" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-gray)" />
+
+            <!-- Gen ReAct Internal Paths -->
+            <path d="M 390 610 L 510 610" fill="none" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-gray)" />
+            <path d="M 590 640 L 590 720" fill="none" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-gray)" />
+            <path d="M 510 750 L 390 750" fill="none" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-gray)" />
+            <path d="M 310 720 L 310 640" fill="none" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-gray)" />
+
+            <!-- Gen Loop -> Clean Draft Output -->
+            <path d="M 450 780 L 450 860" fill="none" stroke="#0969da" stroke-width="3" marker-end="url(#arrow-blue)" />
+            
+            <!-- Clean Draft Output -> Orchestrator (Return Path) -->
+            <path d="M 300 890 L 100 890 L 100 190 L 400 190" fill="none" stroke="#0969da" stroke-width="3" marker-end="url(#arrow-blue)" stroke-linejoin="round" />
+            <text x="110" y="550" class="arrow-text">(1) Yield: Pure Draft Text</text>
+            <text x="110" y="570" class="box-text">All Working Memory (ReAct</text>
+            <text x="110" y="585" class="box-text">Traces) is Garbage Collected.</text>
+
+            <!-- 3. Orchestrator -> Critique Filter -->
+            <path d="M 1150 260 L 1150 310" fill="none" stroke="#0969da" stroke-width="3" marker-end="url(#arrow-blue)" />
+            <text x="1160" y="285" class="arrow-text">(2) Forward: Inject Task &amp; Pure Draft</text>
+
+            <!-- 4. Critique Filter -> AgentSession -->
+            <path d="M 1150 370 L 1150 420" fill="none" stroke="#0969da" stroke-width="3" marker-end="url(#arrow-blue)" />
+            <text x="1160" y="400" class="arrow-text">Isolated Payload (No Gen Traces)</text>
+
+            <!-- Critique AgentSession -> Loop -->
+            <path d="M 1150 500 L 1150 540 L 1010 540 L 1010 580" fill="none" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-gray)" />
+
+            <!-- Critique ReAct Internal Paths -->
+            <path d="M 1090 610 L 1210 610" fill="none" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-gray)" />
+            <path d="M 1290 640 L 1290 720" fill="none" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-gray)" />
+            <path d="M 1210 750 L 1090 750" fill="none" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-gray)" />
+            <path d="M 1010 720 L 1010 640" fill="none" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-gray)" />
+
+            <!-- submit_critique() tool execution line -->
+            <path d="M 1290 780 L 1290 830 L 1150 830 L 1150 860" fill="none" stroke="#00b4d8" stroke-width="3" marker-end="url(#arrow-cyan)" stroke-linejoin="round" />
+            <text x="1300" y="810" class="arrow-text" fill="#00b4d8">submit_critique() Tool</text>
+
+            <!-- CritiqueResult Output -> Orchestrator (Return Path) -->
+            <path d="M 1300 890 L 1500 890 L 1500 190 L 1200 190" fill="none" stroke="#cf222e" stroke-width="3" marker-end="url(#arrow-red)" stroke-linejoin="round" />
+            <text x="1270" y="550" class="arrow-text-alt">(3) Yield: CritiqueResult</text>
+            <text x="1270" y="570" class="box-text">All Working Memory (ReAct</text>
+            <text x="1270" y="585" class="box-text">Traces) is Garbage Collected.</text>
+
+            <!-- Critique Action -> Vector DB (Search) -->
+            <path d="M 1370 610 L 1420 610 L 1420 1110 L 1250 1110" fill="none" stroke="#9673a6" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow-purple)" stroke-linejoin="round" />
+            <text x="1430" y="860" class="box-text" fill="#9673a6" font-weight="bold">retrieve_similar_critiques()</text>
+
+            <!-- Critique Output -> Vector DB (Save Episode) -->
+            <path d="M 1150 920 L 1150 1070" fill="none" stroke="#9673a6" stroke-width="3" marker-end="url(#arrow-purple)" />
+            <text x="1160" y="995" class="box-text" fill="#9673a6" font-weight="bold">(4) Persist Error Episode</text>
+
+        </svg>
+    </div>
+</body>
+</html>

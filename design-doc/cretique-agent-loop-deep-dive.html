@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Isolation & ReAct Loop Interaction</title>
+    <!-- Import Kalam for the Hand-Drawn aesthetic -->
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background-color: #fdfbf7; 
+            padding: 40px; 
+            display: flex; 
+            justify-content: center; 
+            font-family: 'Kalam', cursive;
+        }
+        .diagram-container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.06);
+            padding: 30px;
+            overflow-x: auto;
+            border: 2px solid #e0ddd5;
+        }
+        svg { 
+            display: block; 
+        }
+        .title { font-size: 34px; font-weight: bold; fill: #1f2328; }
+        .subtitle { font-size: 20px; font-weight: normal; fill: #57606a; }
+        .box-title { font-size: 18px; font-weight: bold; fill: #1f2328; }
+        .box-text { font-size: 15px; fill: #24292f; }
+        .box-text-bold { font-size: 15px; font-weight: bold; fill: #1f2328; }
+        .arrow-text { font-size: 16px; font-weight: bold; fill: #0969da; }
+        .arrow-text-alt { font-size: 16px; font-weight: bold; fill: #cf222e; }
+        .sub-box-title { font-size: 16px; font-weight: bold; fill: #1f2328; text-anchor: middle; }
+        .small-text { font-size: 13px; fill: #57606a; }
+    </style>
+</head>
+<body>
+    <div class="diagram-container">
+        <svg width="1800" height="1200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <!-- Hand-drawn style markers -->
+                <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                    <path d="M 0 1 L 9 5 L 0 9 z" fill="#0969da"/>
+                </marker>
+                <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                    <path d="M 0 1 L 9 5 L 0 9 z" fill="#cf222e"/>
+                </marker>
+                <marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                    <path d="M 0 1 L 9 5 L 0 9 z" fill="#57606a"/>
+                </marker>
+                <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                    <path d="M 0 1 L 9 5 L 0 9 z" fill="#9673a6"/>
+                </marker>
+
+                <!-- Soft Pastel Gradients -->
+                <linearGradient id="gradOrange" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#ffedd6"/><stop offset="100%" stop-color="#ffe1ba"/>
+                </linearGradient>
+                <linearGradient id="gradYellow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#fff8d6"/><stop offset="100%" stop-color="#ffeeb3"/>
+                </linearGradient>
+                <linearGradient id="gradBlue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#e8f1ff"/><stop offset="100%" stop-color="#d4e4ff"/>
+                </linearGradient>
+                <linearGradient id="gradPurple" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#f3e8ff"/><stop offset="100%" stop-color="#e8d4ff"/>
+                </linearGradient>
+                <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#e6ffeb"/><stop offset="100%" stop-color="#ccffda"/>
+                </linearGradient>
+                <linearGradient id="gradCyan" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#e0fcff"/><stop offset="100%" stop-color="#baffff"/>
+                </linearGradient>
+                
+                <!-- Soft Shadow -->
+                <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+                    <feDropShadow dx="2" dy="5" stdDeviation="4" flood-opacity="0.08" />
+                </filter>
+            </defs>
+
+            <!-- Titles -->
+            <text x="50" y="50" class="title">Memory Isolation &amp; ReAct Loop Interaction</text>
+            <text x="50" y="80" class="subtitle" fill="#cf222e">Deep Dive into Stateless Multi-Agent Design</text>
+
+            <!-- Background Workspace Boundaries -->
+            <rect x="100" y="400" width="480" height="580" fill="transparent" stroke="#0969da" stroke-width="2" stroke-dasharray="10 6" rx="15" />
+            <text x="340" y="430" font-size="20" font-weight="bold" fill="#0969da" text-anchor="middle">Generator Workspace</text>
+            <text x="340" y="450" class="box-text" fill="#0969da" text-anchor="middle">(Isolated Python Scope)</text>
+
+            <rect x="630" y="400" width="480" height="580" fill="transparent" stroke="#9673a6" stroke-width="2" stroke-dasharray="10 6" rx="15" />
+            <text x="870" y="430" font-size="20" font-weight="bold" fill="#9673a6" text-anchor="middle">Critique Workspace</text>
+            <text x="870" y="450" class="box-text" fill="#9673a6" text-anchor="middle">(Isolated Python Scope)</text>
+
+            <!-- Orchestrator Box (Top Center) -->
+            <rect x="350" y="100" width="700" height="150" rx="15" fill="url(#gradOrange)" stroke="#d79b00" stroke-width="2" filter="url(#shadow)" />
+            <text x="700" y="140" class="box-title" font-size="24" text-anchor="middle">🧠 Orchestrator Service</text>
+            <text x="700" y="165" class="box-text" text-anchor="middle">(State Coordinator)</text>
+            <line x1="400" y1="185" x2="1000" y2="185" stroke="#d79b00" stroke-width="1" stroke-dasharray="6 4" />
+            <text x="700" y="210" class="box-text-bold" fill="#cf222e" text-anchor="middle">Parent State Only (Global)</text>
+            <text x="700" y="235" class="box-text" text-anchor="middle">• iteration_count   • current_draft   • critique_result   • status</text>
+
+            <!-- State Filters (Barriers) -->
+            <rect x="180" y="300" width="220" height="70" rx="10" fill="url(#gradYellow)" stroke="#d6b656" stroke-width="2" filter="url(#shadow)" />
+            <text x="290" y="330" class="box-title" text-anchor="middle">State Filter ⚗️</text>
+            <text x="290" y="355" class="box-text" text-anchor="middle">Deep Copy &amp; Extract</text>
+            <!-- Sanitization barrier labels -->
+            <path d="M 120 280 L 170 300" fill="none" stroke="#57606a" stroke-width="1" stroke-dasharray="4 4" marker-end="url(#arrow-gray)" />
+            <text x="110" y="270" class="small-text" text-anchor="end">No Object</text>
+            <text x="110" y="285" class="small-text" text-anchor="end">Reference Sharing</text>
+            <path d="M 120 350 L 170 330" fill="none" stroke="#57606a" stroke-width="1" stroke-dasharray="4 4" marker-end="url(#arrow-gray)" />
+            <text x="110" y="355" class="small-text" text-anchor="end">Context Sanitization</text>
+
+            <rect x="850" y="300" width="220" height="70" rx="10" fill="url(#gradYellow)" stroke="#d6b656" stroke-width="2" filter="url(#shadow)" />
+            <text x="960" y="330" class="box-title" text-anchor="middle">State Filter ⚗️</text>
+            <text x="960" y="355" class="box-text" text-anchor="middle">Deep Copy &amp; Extract</text>
+
+            <!-- Generator Internal Components -->
+            <rect x="160" y="470" width="360" height="90" rx="15" fill="#ffffff" stroke="#0969da" stroke-width="2" filter="url(#shadow)" />
+            <text x="340" y="500" class="box-title" text-anchor="middle">AgentSession (Working Memory)</text>
+            <text x="340" y="525" class="box-text" text-anchor="middle">Newly instantiated</text>
+            <text x="340" y="545" class="box-text" text-anchor="middle">for every iteration</text>
+
+            <!-- Gen ReAct Loop -->
+            <rect x="280" y="600" width="120" height="50" rx="25" fill="#ffffff" stroke="#57606a" stroke-width="2" />
+            <text x="340" y="630" class="sub-box-title">Thought 💭</text>
+
+            <rect x="130" y="680" width="120" height="50" rx="25" fill="#ffffff" stroke="#57606a" stroke-width="2" />
+            <text x="190" y="710" class="sub-box-title">Action 🔧</text>
+
+            <rect x="430" y="680" width="120" height="50" rx="25" fill="#ffffff" stroke="#57606a" stroke-width="2" />
+            <text x="490" y="710" class="sub-box-title">Observation 👁️</text>
+
+            <rect x="280" y="760" width="120" height="50" rx="25" fill="#ffffff" stroke="#57606a" stroke-width="2" />
+            <text x="340" y="790" class="sub-box-title">Update Context</text>
+
+            <text x="340" y="710" class="box-title" fill="#57606a" text-anchor="middle">ReAct Loop</text>
+            <text x="340" y="730" class="box-text" fill="#57606a" text-anchor="middle">(Max Tool Calls = 15)</text>
+
+            <!-- Gen Output -->
+            <rect x="240" y="850" width="200" height="80" rx="10" fill="url(#gradGreen)" stroke="#82b366" stroke-width="2" filter="url(#shadow)" />
+            <text x="340" y="880" class="box-title" text-anchor="middle">📄 Output: Final Draft</text>
+            <text x="340" y="910" class="box-text" text-anchor="middle">(No ReAct Trace)</text>
+
+            <!-- Gen Memory Destroyed -->
+            <rect x="160" y="960" width="360" height="70" rx="10" fill="#fff5f5" stroke="#cf222e" stroke-width="2" stroke-dasharray="6 4" />
+            <text x="340" y="990" class="box-title" fill="#cf222e" text-anchor="middle">🗑️ Working Memory Destroyed</text>
+            <text x="340" y="1015" class="box-text-bold" fill="#cf222e" text-anchor="middle">All ReAct Traces Garbage Collected</text>
+
+            <!-- Critique Internal Components -->
+            <rect x="690" y="470" width="360" height="90" rx="15" fill="#ffffff" stroke="#9673a6" stroke-width="2" filter="url(#shadow)" />
+            <text x="870" y="500" class="box-title" text-anchor="middle">AgentSession (Working Memory)</text>
+            <text x="870" y="525" class="box-text" text-anchor="middle">Newly instantiated</text>
+            <text x="870" y="545" class="box-text" text-anchor="middle">for every iteration</text>
+
+            <!-- Crit ReAct Loop -->
+            <rect x="810" y="600" width="120" height="50" rx="25" fill="#ffffff" stroke="#57606a" stroke-width="2" />
+            <text x="870" y="630" class="sub-box-title">Evaluate ⚖️</text>
+
+            <rect x="660" y="680" width="120" height="50" rx="25" fill="#ffffff" stroke="#57606a" stroke-width="2" />
+            <text x="720" y="710" class="sub-box-title">Tool Use 🔧</text>
+
+            <rect x="960" y="680" width="120" height="50" rx="25" fill="#ffffff" stroke="#57606a" stroke-width="2" />
+            <text x="1020" y="710" class="sub-box-title">Observe 👁️</text>
+
+            <rect x="810" y="760" width="120" height="50" rx="25" fill="#ffffff" stroke="#57606a" stroke-width="2" />
+            <text x="870" y="790" class="sub-box-title">Update Context</text>
+
+            <text x="870" y="700" class="box-title" fill="#57606a" text-anchor="middle">ReAct Loop</text>
+            <text x="870" y="720" class="box-text" fill="#cf222e" text-anchor="middle">Mandatory Exit:</text>
+            <text x="870" y="740" class="box-text-bold" fill="#cf222e" text-anchor="middle">submit_critique()</text>
+
+            <!-- Crit Output -->
+            <rect x="745" y="850" width="250" height="80" rx="10" fill="url(#gradCyan)" stroke="#00b4d8" stroke-width="2" filter="url(#shadow)" />
+            <text x="870" y="880" class="box-title" text-anchor="middle">📋 Output: CritiqueResult</text>
+            <text x="870" y="910" class="box-text" text-anchor="middle">{ passed: bool, feedback: ... }</text>
+
+            <!-- Crit Memory Destroyed -->
+            <rect x="690" y="960" width="360" height="70" rx="10" fill="#fff5f5" stroke="#cf222e" stroke-width="2" stroke-dasharray="6 4" />
+            <text x="870" y="990" class="box-title" fill="#cf222e" text-anchor="middle">🗑️ Working Memory Destroyed</text>
+            <text x="870" y="1015" class="box-text-bold" fill="#cf222e" text-anchor="middle">All ReAct Traces Garbage Collected</text>
+
+
+            <!-- Python Tool List -->
+            <rect x="1140" y="470" width="250" height="400" rx="15" fill="url(#gradPurple)" stroke="#9673a6" stroke-width="2" filter="url(#shadow)" />
+            <text x="1265" y="510" class="box-title" text-anchor="middle">Python Function</text>
+            <text x="1265" y="535" class="box-title" text-anchor="middle">Tool List 🔧</text>
+            <text x="1265" y="560" class="box-text" text-anchor="middle">(Extensible)</text>
+            <line x1="1160" y1="580" x2="1370" y2="580" stroke="#9673a6" stroke-width="1" />
+            
+            <text x="1160" y="610" class="box-text-bold" fill="#9673a6">★ submit_critique()</text>
+            <text x="1160" y="630" class="box-text" fill="#cf222e">(Required)</text>
+
+            <text x="1160" y="670" class="box-text">• read_local_document()</text>
+            <text x="1160" y="700" class="box-text">• search_memory()</text>
+            <text x="1160" y="730" class="box-text">• web_search(query)</text>
+            <text x="1160" y="760" class="box-text">• run_sql_query()</text>
+            <text x="1160" y="790" class="box-text">• code_interpreter()</text>
+            <text x="1160" y="820" class="box-text">• ... N custom tools</text>
+
+            <!-- Host VM / External Block -->
+            <rect x="1450" y="320" width="300" height="660" rx="15" fill="#f6f8fa" stroke="#0969da" stroke-width="2" filter="url(#shadow)" />
+            <text x="1600" y="360" class="box-title" fill="#0969da" text-anchor="middle">Host VM Resources</text>
+            <text x="1600" y="380" class="box-text" text-anchor="middle">(Local Machine)</text>
+            
+            <rect x="1470" y="400" width="260" height="80" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1" />
+            <text x="1600" y="430" class="box-text-bold" text-anchor="middle">📂 File System</text>
+            <text x="1600" y="455" class="box-text" text-anchor="middle">./local_data documents</text>
+
+            <rect x="1470" y="500" width="260" height="80" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1" />
+            <text x="1600" y="530" class="box-text-bold" text-anchor="middle">🗄️ Databases</text>
+            <text x="1600" y="555" class="box-text" text-anchor="middle">PostgreSQL (asyncpg)</text>
+
+            <rect x="1470" y="600" width="260" height="80" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1" />
+            <text x="1600" y="630" class="box-text-bold" fill="#cf222e" text-anchor="middle">🧠 Vector Store / Memory</text>
+            <text x="1600" y="655" class="box-text" text-anchor="middle">ChromaDB / FAISS</text>
+
+            <rect x="1470" y="700" width="260" height="80" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1" />
+            <text x="1600" y="730" class="box-text-bold" text-anchor="middle">💻 Python Execution Kernel</text>
+            <text x="1600" y="755" class="box-text" text-anchor="middle">Jupyter / Sandbox Environment</text>
+
+            <rect x="1470" y="800" width="260" height="80" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="1" />
+            <text x="1600" y="830" class="box-text-bold" text-anchor="middle">🌐 External Services</text>
+            <text x="1600" y="855" class="box-text" text-anchor="middle">REST APIs &amp; Message Queue</text>
+
+
+            <!-- Episodic Memory Block -->
+            <rect x="520" y="1080" width="240" height="90" rx="15" fill="url(#gradPurple)" stroke="#9673a6" stroke-width="2" filter="url(#shadow)" />
+            <text x="640" y="1115" class="box-title" text-anchor="middle">🧠 Episodic Memory</text>
+            <text x="640" y="1140" class="box-text" text-anchor="middle">ChromaDB / pgvector</text>
+
+
+            <!-- Flow Legend -->
+            <rect x="50" y="1000" width="250" height="170" rx="10" fill="transparent" stroke="#57606a" stroke-width="2" stroke-dasharray="6 4" />
+            <text x="175" y="1030" class="box-title" text-anchor="middle">Flow Legend</text>
+            <path d="M 70 1060 L 120 1060" fill="none" stroke="#0969da" stroke-width="3" marker-end="url(#arrow-blue)" />
+            <text x="130" y="1065" class="small-text">Generator -> Orchestrator</text>
+            
+            <path d="M 70 1090 L 120 1090" fill="none" stroke="#cf222e" stroke-width="3" marker-end="url(#arrow-red)" />
+            <text x="130" y="1095" class="small-text">Critique -> Orchestrator</text>
+
+            <path d="M 70 1120 L 120 1120" fill="none" stroke="#0969da" stroke-width="3" stroke-dasharray="6 4" marker-end="url(#arrow-blue)" />
+            <text x="130" y="1125" class="small-text">Orchestrator -> Generator</text>
+
+            <path d="M 70 1150 L 120 1150" fill="none" stroke="#cf222e" stroke-width="3" stroke-dasharray="6 4" marker-end="url(#arrow-red)" />
+            <text x="130" y="1155" class="small-text">Orchestrator -> Critique</text>
+
+
+            <!-- Key Takeaways -->
+            <rect x="1100" y="1000" width="650" height="170" rx="10" fill="url(#gradYellow)" stroke="#d6b656" stroke-width="2" filter="url(#shadow)" />
+            <text x="1130" y="1040" class="box-title" font-size="20">💡 Key Takeaways</text>
+            <text x="1130" y="1080" class="box-text-bold">✅ Complete memory isolation between agents</text>
+            <text x="1130" y="1115" class="box-text-bold">✅ Stateless ReAct loops (fresh context every time)</text>
+            <text x="1130" y="1150" class="box-text-bold">✅ Structured state passing prevents context bleeding</text>
+
+
+            <!-- ========================================== -->
+            <!-- ROUTING ARROWS (ORTHOGONAL)                -->
+            <!-- ========================================== -->
+            
+            <!-- 1. Orchestrator -> Gen Filter (DOWN) -->
+            <path d="M 290 250 L 290 290" fill="none" stroke="#0969da" stroke-width="4" marker-end="url(#arrow-blue)" />
+            <text x="210" y="180" class="arrow-text" font-size="24">①</text>
+            <text x="250" y="210" class="box-text-bold" fill="#0969da">Dispatch Task</text>
+            <!-- From Filter to Agent -->
+            <path d="M 290 370 L 290 460" fill="none" stroke="#0969da" stroke-width="3" stroke-dasharray="6 4" marker-end="url(#arrow-blue)" />
+
+            <!-- 2. Generator Output -> Orchestrator (UP) -->
+            <path d="M 400 850 L 400 220 L 400 220" fill="none" stroke="#0969da" stroke-width="4" marker-end="url(#arrow-blue)" stroke-linejoin="round" />
+            <text x="420" y="320" class="arrow-text" font-size="24">②</text>
+            <text x="420" y="350" class="box-text-bold" fill="#0969da">Yield Draft</text>
+            <text x="420" y="375" class="box-text" fill="#0969da">(State Filtered)</text>
+
+            <!-- 3. Orchestrator -> Critique Filter (DOWN) -->
+            <path d="M 960 250 L 960 290" fill="none" stroke="#cf222e" stroke-width="4" marker-end="url(#arrow-red)" />
+            <text x="1000" y="180" class="arrow-text-alt" font-size="24">③</text>
+            <text x="1040" y="210" class="box-text-bold" fill="#cf222e">Inject Task &amp; Pure Draft</text>
+            <text x="1040" y="235" class="box-text" fill="#cf222e">(State Filtered)</text>
+            <!-- From Filter to Agent -->
+            <path d="M 960 370 L 960 460" fill="none" stroke="#cf222e" stroke-width="3" stroke-dasharray="6 4" marker-end="url(#arrow-red)" />
+
+            <!-- 4. Critique Output -> Orchestrator (UP) -->
+            <path d="M 830 850 L 830 220" fill="none" stroke="#cf222e" stroke-width="4" marker-end="url(#arrow-red)" stroke-linejoin="round" />
+            <text x="850" y="320" class="arrow-text-alt" font-size="24">④</text>
+            <text x="850" y="350" class="box-text-bold" fill="#cf222e">Yield CritiqueResult</text>
+            <text x="850" y="375" class="box-text" fill="#cf222e">(State Filtered)</text>
+
+            <!-- 5. Orchestrator -> Gen Filter (LOOP DOWN - DASHED) -->
+            <path d="M 250 250 L 250 290" fill="none" stroke="#0969da" stroke-width="4" stroke-dasharray="8 6" marker-end="url(#arrow-blue)" />
+            <text x="110" y="160" class="arrow-text" font-size="24">⑤</text>
+            <text x="150" y="190" class="box-text-bold" fill="#0969da">Loop: Inject Task &amp;</text>
+            <text x="150" y="215" class="box-text-bold" fill="#0969da">Revision Notes (if failed)</text>
+
+
+            <!-- Internal ReAct Loop Paths (Generator) -->
+            <path d="M 340 600 L 490 600 L 490 670" fill="none" stroke="#57606a" stroke-width="3" marker-end="url(#arrow-gray)" stroke-linejoin="round" />
+            <path d="M 490 730 L 490 785 L 410 785" fill="none" stroke="#57606a" stroke-width="3" marker-end="url(#arrow-gray)" stroke-linejoin="round" />
+            <path d="M 270 785 L 190 785 L 190 740" fill="none" stroke="#57606a" stroke-width="3" marker-end="url(#arrow-gray)" stroke-linejoin="round" />
+            <path d="M 190 670 L 190 625 L 270 625" fill="none" stroke="#57606a" stroke-width="3" marker-end="url(#arrow-gray)" stroke-linejoin="round" />
+
+            <!-- Internal ReAct Loop Paths (Critique) -->
+            <path d="M 870 600 L 1020 600 L 1020 670" fill="none" stroke="#57606a" stroke-width="3" marker-end="url(#arrow-gray)" stroke-linejoin="round" />
+            <path d="M 1020 730 L 1020 785 L 940 785" fill="none" stroke="#57606a" stroke-width="3" marker-end="url(#arrow-gray)" stroke-linejoin="round" />
+            <path d="M 800 785 L 720 785 L 720 740" fill="none" stroke="#57606a" stroke-width="3" marker-end="url(#arrow-gray)" stroke-linejoin="round" />
+            <path d="M 720 670 L 720 625 L 800 625" fill="none" stroke="#57606a" stroke-width="3" marker-end="url(#arrow-gray)" stroke-linejoin="round" />
+
+            <!-- Critique -> Vector DB Persistence line -->
+            <path d="M 870 1030 L 870 1125 L 770 1125" fill="none" stroke="#9673a6" stroke-width="3" stroke-dasharray="6 4" marker-end="url(#arrow-purple)" stroke-linejoin="round" />
+            <text x="885" y="1080" class="box-text-bold" fill="#9673a6">Persist Error Episode</text>
+
+            <!-- Vector DB -> Critique Tool line -->
+            <path d="M 760 1150 L 1100 1150 L 1100 900" fill="none" stroke="#9673a6" stroke-width="3" stroke-dasharray="6 4" marker-end="url(#arrow-purple)" stroke-linejoin="round" />
+            <text x="1115" y="1025" class="box-text-bold" fill="#9673a6">retrieve_similar_critiques()</text>
+
+            <!-- Tool List <-> Host VM -->
+            <path d="M 1390 650 L 1440 650" fill="none" stroke="#1f2328" stroke-width="4" marker-end="url(#arrow-gray)" />
+            <path d="M 1440 670 L 1390 670" fill="none" stroke="#1f2328" stroke-width="4" marker-end="url(#arrow-gray)" />
+
+        </svg>
+    </div>
+</body>
+</html>
