@@ -21,7 +21,7 @@ from anthropic.types import Message
 from app.core.config import settings
 from app.domain.exceptions import GeneratorLoopError
 from app.domain.models import AgentSession
-from app.services.agent_utils import extract_text, serialize_content
+from app.services.agent_utils import call_handler, extract_text, serialize_content
 from app.services.tools.common_tools import (
     COMMON_TOOL_DEFINITIONS,
     COMMON_TOOL_REGISTRY,
@@ -165,7 +165,7 @@ class GeneratorAgentService:
                             )
                         else:
                             try:
-                                result = handler(dict(block.input))
+                                result = await call_handler(handler, dict(block.input))
                             except Exception as exc:
                                 logger.error(
                                     "Generator tool '%s' raised unexpected exception: %s",

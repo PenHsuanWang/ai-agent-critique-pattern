@@ -815,7 +815,16 @@ Failed episodes encode what *went wrong* — recurring failure patterns are the 
 ## 9. Agent System Deep Dive
 
 **Diagram status:**  
-The image files in `design-doc/` are useful for explaining the design intent, but they are **not all implementation-accurate**. In particular, `design-doc/cretique-agent-loop-deep-dive.jpg` and `design-doc/architecture-diagram.jpg` omit the current `previous_draft` / `previous_critique` continuity paths and show older tool/storage examples that are not present in the codebase. For source-of-truth behaviour, use:
+The image files in `design-doc/` are useful for explaining the design intent, but they are **not all implementation-accurate**. Known divergences from current code:
+
+| Diagram element | Diagram value | Actual value |
+|---|---|---|
+| Critique workspace — *Max Tool Calls* | 15 | 10 (`CRITIQUE_MAX_TOOL_CALLS`) |
+| Vector Store label | "ChromaDB / pgvector" | **pgvector only** — ChromaDB removed in v0.6.0 |
+| `submit_critique` signature shown | `(passed, feedback)` | `(passed, issues, revision_notes, confidence_score)` |
+| Continuity paths (`previous_draft`, `previous_critique`) | Not shown | Implemented — see Patterns 6 & 8 |
+
+For source-of-truth behaviour, use:
 
 - `app/services/orchestrator.py`
 - `app/services/generator_agent.py`
@@ -835,6 +844,8 @@ The image files in `design-doc/` are useful for explaining the design intent, bu
 **Extended thinking:** When `EXTENDED_THINKING=true`, Claude is given a `thinking` block before generating its response. Thinking blocks are preserved in the `AgentSession.messages` list (via `_serialize_content()` using `.model_dump()`) to maintain continuity across tool call rounds.
 
 **Output purity guarantee (CRITICAL OUTPUT RULE):** The Generator system prompt explicitly bans any conversational preamble or meta-commentary in the final response. The draft must begin immediately — no "Here is the updated draft:", no "I have revised Section 2 as requested.", no wrappers. This is enforced by the system prompt, not at parse-time; the constraint is necessary because the Orchestrator passes the Generator's raw text output directly to the Critique agent. Any conversational prefix would be treated as draft content and flagged as unprofessional by the Critique.
+
+**Tool dispatch:** All tool calls in the Generator loop are routed through `call_handler` (same as the Critique — see §9.2). All common tools are synchronous, so `call_handler` delegates to `handler(input_dict)` in practice; but using the shared adapter means adding an async generator tool in future requires no change to the dispatch loop.
 
 ### 9.2 Critique Agent
 
@@ -864,23 +875,18 @@ See Pattern 8 for full detail.
 
 **ReAct loop safety cap:** Controlled by `CRITIQUE_MAX_TOOL_CALLS` (default 10). Prevents runaway tool-use spirals.
 
-**Async tool dispatch:** The Critique agent's tool dispatcher uses the `call_handler` adapter from `services/agent_utils.py`, which unifies sync and async handler calling conventions:
+**Tool dispatch (`call_handler`):** Both the Generator and Critique agents route every tool call through the `call_handler` adapter from `services/agent_utils.py`. This unifies sync and async handler calling conventions at a single dispatch site:
 ```python
 # services/agent_utils.py
-async def call_handler(handler: Callable, input_dict: dict) -> str:
-    """Dispatch sync or async tool handler with correct calling convention."""
-    try:
-        if asyncio.iscoroutinefunction(handler):
-            return await handler(**input_dict)   # async handlers: keyword args
-        return handler(input_dict)               # sync handlers: full dict
-    except Exception as exc:
-        logger.error("Tool handler raised: %s", exc, exc_info=True)
-        return f"Error: tool encountered an unexpected error — {exc}"
+async def call_handler(handler: Any, input_dict: dict[str, Any]) -> Any:
+    if asyncio.iscoroutinefunction(handler):
+        return await handler(**input_dict)   # async handlers: keyword args
+    return handler(input_dict)               # sync handlers: full dict
 
-# Usage in critique_agent.py
+# Usage in both generator_agent.py and critique_agent.py
 result = await call_handler(handler, dict(block.input))
 ```
-This is required because `retrieve_similar_critiques` is async (asyncpg/pgvector queries are I/O-bound), while common document tools and `submit_critique` are synchronous. The asymmetry between calling conventions (dict vs kwargs) reflects the respective tool registration contracts. `call_handler` preserves both while keeping the dispatch site to a single line.
+Exception handling is done by the caller (not inside `call_handler`) so the agent loop can decide whether to surface the error as a tool result or re-raise it. This is required because `retrieve_similar_critiques` is async (asyncpg/pgvector queries are I/O-bound), while common document tools and `submit_critique` are synchronous. The asymmetry between calling conventions (dict vs kwargs) reflects the respective tool registration contracts. `call_handler` preserves both while keeping the dispatch site to a single line.
 
 **Scope boundary in system prompt:** The Critique agent is explicitly instructed **not** to penalise the draft for formatting style choices unrelated to clarity, nor for meta-commentary that the Critique itself may introduce during evaluation. This prevents false rejections driven by subjective preferences rather than objective quality gaps.
 
