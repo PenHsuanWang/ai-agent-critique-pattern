@@ -8,8 +8,10 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Path
+from fastapi.responses import PlainTextResponse
 
 from app.schemas.hitl import HITLResumeRequest, HITLSessionStateResponse
+from app.services.audit_logger import generate_audit_log
 from app.services.orchestrator import orchestrator_service
 
 logger = logging.getLogger(__name__)
@@ -92,3 +94,21 @@ async def resume_session(
         additional_iterations=body.additional_iterations,
     )
     return _state_to_response(updated_state)
+
+@router.get("/{session_id}/audit", response_class=PlainTextResponse)
+async def get_audit_log(
+    session_id: Annotated[str, Path(description="Orchestrator session ID")],
+):
+    """Return the audit log for a session as a Markdown text string."""
+    if orchestrator_service._checkpointer is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Checkpointer not configured. Set DATABASE_URL or use in-memory fallback.",
+        )
+    state = await orchestrator_service._checkpointer.get(session_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found.")
+        
+    audit_log = generate_audit_log(state)
+    return audit_log
+
